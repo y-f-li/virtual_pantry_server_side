@@ -1,43 +1,52 @@
 package ch.uzh.ifi.hase.soprafs26.exceptions;
 
+import ch.uzh.ifi.hase.soprafs26.rest.dto.ErrorResponseDTO;
+import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.TransactionSystemException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.client.HttpServerErrorException;
-import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.server.ResponseStatusException;
-import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
-
-import jakarta.servlet.http.HttpServletRequest;
 
 @ControllerAdvice(annotations = RestController.class)
-public class GlobalExceptionAdvice extends ResponseEntityExceptionHandler {
+public class GlobalExceptionAdvice {
 
-	private final Logger log = LoggerFactory.getLogger(GlobalExceptionAdvice.class);
+  private final Logger log = LoggerFactory.getLogger(GlobalExceptionAdvice.class);
 
-	@ExceptionHandler(value = { IllegalArgumentException.class, IllegalStateException.class })
-	protected ResponseEntity<Object> handleConflict(RuntimeException ex, WebRequest request) {
-		String bodyOfResponse = "This should be application specific";
-		return handleExceptionInternal(ex, bodyOfResponse, new HttpHeaders(), HttpStatus.CONFLICT, request);
-	}
+  @ExceptionHandler(ResponseStatusException.class)
+  public ResponseEntity<ErrorResponseDTO> handleResponseStatusException(
+      ResponseStatusException ex, HttpServletRequest request) {
 
-	@ExceptionHandler(TransactionSystemException.class)
-	public ResponseStatusException handleTransactionSystemException(Exception ex, HttpServletRequest request) {
-		log.error("Request: {} raised {}", request.getRequestURL(), ex);
-		return new ResponseStatusException(HttpStatus.CONFLICT, ex.getMessage(), ex);
-	}
+    String reason = ex.getReason() != null ? ex.getReason() : "Unexpected error";
 
-	// Keep this one disable for all testing purposes -> it shows more detail with
-	// this one disabled
-	@ExceptionHandler(HttpServerErrorException.InternalServerError.class)
-	public ResponseStatusException handleException(Exception ex) {
-		log.error("Default Exception Handler -> caught:", ex);
-		return new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage(), ex);
-	}
+    if (ex.getStatusCode().is5xxServerError()) {
+      log.error("Request: {} failed", request.getRequestURL(), ex);
+    } else {
+      log.warn("Request: {} rejected: {}", request.getRequestURL(), reason);
+    }
+
+    return ResponseEntity.status(ex.getStatusCode()).body(new ErrorResponseDTO(reason));
+  }
+
+  @ExceptionHandler(TransactionSystemException.class)
+  public ResponseEntity<ErrorResponseDTO> handleTransactionSystemException(
+      TransactionSystemException ex, HttpServletRequest request) {
+
+    log.error("Request: {} transaction failed", request.getRequestURL(), ex);
+    return ResponseEntity.status(HttpStatus.CONFLICT)
+        .body(new ErrorResponseDTO("Database constraint violation"));
+  }
+
+  @ExceptionHandler(Exception.class)
+  public ResponseEntity<ErrorResponseDTO> handleAny(
+      Exception ex, HttpServletRequest request) {
+
+    log.error("Request: {} crashed", request.getRequestURL(), ex);
+    return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+        .body(new ErrorResponseDTO("Internal server error"));
+  }
 }

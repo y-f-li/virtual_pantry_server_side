@@ -6,6 +6,8 @@ import ch.uzh.ifi.hase.soprafs26.constant.UserStatus;
 
 import java.io.Serializable;
 
+import java.time.Instant;
+
 /**
  * Internal User Representation
  * This class composes the internal representation of the user and defines how
@@ -16,20 +18,20 @@ import java.io.Serializable;
  * - unique = true -> this value must be unqiue across the database -> composes
  * the primary key
  */
-@Entity
-@Table(name = "users")
+@Entity // this class is stored in a table
+@Table(name = "users") // The table name is users
 public class User implements Serializable {
 
 	private static final long serialVersionUID = 1L;
 
-	@Id
+	@Id // Primary key
 	@GeneratedValue
 	private Long id;
 
 	@Column(nullable = false)
-	private String name;
+	private String password;
 
-	@Column(nullable = false, unique = true)
+	@Column(nullable = false, unique = true) // Needs not to be empty and the entry must be unique
 	private String username;
 
 	@Column(nullable = false, unique = true)
@@ -37,6 +39,19 @@ public class User implements Serializable {
 
 	@Column(nullable = false)
 	private UserStatus status;
+
+	@Column(nullable = true)
+	private String bio;
+
+	@Column(nullable = false, updatable = false)
+	private Instant creationDate;
+
+	@PrePersist
+	protected void onCreate() {
+	if (this.creationDate == null) {
+		this.creationDate = Instant.now();
+	}
+	}
 
 	public Long getId() {
 		return id;
@@ -46,12 +61,12 @@ public class User implements Serializable {
 		this.id = id;
 	}
 
-	public String getName() {
-		return name;
+	public String getPassword() {
+		return password;
 	}
 
-	public void setName(String name) {
-		this.name = name;
+	public void setPassword(String password) {
+		this.password = password;
 	}
 
 	public String getUsername() {
@@ -69,6 +84,12 @@ public class User implements Serializable {
 	public void setToken(String token) {
 		this.token = token;
 	}
+
+	public String getBio() { return bio; }
+	public void setBio(String bio) { this.bio = bio; }
+
+	public Instant getCreationDate() { return creationDate; }
+	public void setCreationDate(Instant creationDate) { this.creationDate = creationDate; }
 
 	public UserStatus getStatus() {
 		return status;
