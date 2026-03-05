@@ -7,6 +7,7 @@ import tools.jackson.databind.ObjectMapper;
 import ch.uzh.ifi.hase.soprafs26.constant.UserStatus;
 import ch.uzh.ifi.hase.soprafs26.entity.User;
 import ch.uzh.ifi.hase.soprafs26.rest.dto.UserPostDTO;
+import ch.uzh.ifi.hase.soprafs26.rest.dto.UserPutDTO;
 import ch.uzh.ifi.hase.soprafs26.service.UserService;
 
 import org.junit.jupiter.api.Test;
@@ -28,6 +29,7 @@ import static org.hamcrest.Matchers.is;
 import static org.mockito.BDDMockito.given;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -127,5 +129,136 @@ public class UserControllerTest {
 					String.format("The request body could not be created.%s", e.toString()));
 		}
 	}
+
+	@Test
+	public void createUser_duplicateUsername_returns409AndReason() throws Exception {
+		// given
+		UserPostDTO userPostDTO = new UserPostDTO();
+		userPostDTO.setUsername("testUsername");
+		userPostDTO.setPassword("pw");
+		userPostDTO.setBio("hi");
+
+		given(userService.createUser(Mockito.any()))
+			.willThrow(new ResponseStatusException(HttpStatus.CONFLICT, "username already exists"));
+
+		// when
+		MockHttpServletRequestBuilder postRequest = post("/users")
+			.contentType(MediaType.APPLICATION_JSON)
+			.accept(MediaType.APPLICATION_JSON)
+			.content(asJsonString(userPostDTO));
+
+		// then
+		mockMvc.perform(postRequest)
+			.andExpect(status().isConflict())
+			.andExpect(jsonPath("$.reason", is("username already exists")));
+	}
+
+
+	@Test
+	public void getUser_validId_returns200AndUserJson() throws Exception {
+		// given
+		User user = new User();
+		user.setId(1L);
+		user.setUsername("testUsername");
+		user.setPassword("pw");
+		user.setBio("hello");
+		user.setToken("test-token");
+		user.setStatus(UserStatus.ONLINE);
+
+		// endpoint is protected -> controller calls authenticate(token)
+		given(userService.authenticate(Mockito.eq("test-token"))).willReturn(user);
+
+		// controller calls getUserById(userId)
+		given(userService.getUserById(1L)).willReturn(user);
+
+		// when
+		MockHttpServletRequestBuilder getRequest = get("/users/1")
+			.header("Authorization", "Bearer test-token")
+			.accept(MediaType.APPLICATION_JSON);
+
+		// then
+		mockMvc.perform(getRequest)
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.id", is(user.getId().intValue())))
+			.andExpect(jsonPath("$.username", is(user.getUsername())))
+			.andExpect(jsonPath("$.status", is(user.getStatus().toString())))
+			.andExpect(jsonPath("$.bio", is(user.getBio())))
+			.andExpect(jsonPath("$.token", is(user.getToken())));
+	}
+
+
+	@Test
+	public void getUser_unknownId_returns404AndReason() throws Exception {
+		// given
+		User authUser = new User();
+		authUser.setId(1L);
+		authUser.setUsername("authUser");
+		authUser.setPassword("pw");
+		authUser.setToken("test-token");
+		authUser.setStatus(UserStatus.ONLINE);
+
+		given(userService.authenticate(Mockito.eq("test-token"))).willReturn(authUser);
+
+		given(userService.getUserById(999L))
+			.willThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "user not found"));
+
+		// when
+		MockHttpServletRequestBuilder getRequest = get("/users/999")
+			.header("Authorization", "Bearer test-token")
+			.accept(MediaType.APPLICATION_JSON);
+
+		// then
+		mockMvc.perform(getRequest)
+			.andExpect(status().isNotFound())
+			.andExpect(jsonPath("$.reason", is("user not found")));
+	}
+
+
+	@Test
+	public void updateUser_validId_returns204() throws Exception {
+		// given
+		UserPutDTO userPutDTO = new UserPutDTO();
+		userPutDTO.setOldPassword("oldPw");
+		userPutDTO.setPassword("newPw");
+
+		Mockito.doNothing().when(userService)
+			.updateUser(Mockito.eq(1L), Mockito.eq("test-token"), Mockito.any(UserPutDTO.class));
+
+		// when
+		MockHttpServletRequestBuilder putRequest = put("/users/1")
+			.header("Authorization", "Bearer test-token")
+			.contentType(MediaType.APPLICATION_JSON)
+			.accept(MediaType.APPLICATION_JSON)
+			.content(asJsonString(userPutDTO));
+
+		// then
+		mockMvc.perform(putRequest)
+			.andExpect(status().isNoContent());
+	}
+
+	@Test
+	public void updateUser_unknownId_returns404AndReason() throws Exception {
+		// given
+		UserPutDTO userPutDTO = new UserPutDTO();
+		userPutDTO.setOldPassword("oldPw");
+		userPutDTO.setPassword("newPw");
+
+		Mockito.doThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "user not found"))
+			.when(userService)
+			.updateUser(Mockito.eq(999L), Mockito.eq("test-token"), Mockito.any(UserPutDTO.class));
+
+		// when
+		MockHttpServletRequestBuilder putRequest = put("/users/999")
+			.header("Authorization", "Bearer test-token")
+			.contentType(MediaType.APPLICATION_JSON)
+			.accept(MediaType.APPLICATION_JSON)
+			.content(asJsonString(userPutDTO));
+
+		// then
+		mockMvc.perform(putRequest)
+			.andExpect(status().isNotFound())
+			.andExpect(jsonPath("$.reason", is("user not found")));
+	}
+
 }
 
