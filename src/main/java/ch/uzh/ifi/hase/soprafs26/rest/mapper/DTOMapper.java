@@ -1,23 +1,15 @@
 package ch.uzh.ifi.hase.soprafs26.rest.mapper;
 
-import org.mapstruct.*;
+import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
 import org.mapstruct.factory.Mappers;
 
+import ch.uzh.ifi.hase.soprafs26.entity.PantryItem;
 import ch.uzh.ifi.hase.soprafs26.entity.User;
+import ch.uzh.ifi.hase.soprafs26.rest.dto.PantryItemGetDTO;
 import ch.uzh.ifi.hase.soprafs26.rest.dto.UserGetDTO;
 import ch.uzh.ifi.hase.soprafs26.rest.dto.UserPostDTO;
 
-/**
- * DTOMapper
- * This class is responsible for generating classes that will automatically
- * transform/map the internal representation
- * of an entity (e.g., the User) to the external/API representation (e.g.,
- * UserGetDTO for getting, UserPostDTO for creating)
- * and vice versa.
- * Additional mappers can be defined for new entities.
- * Always created one mapper for getting information (GET) and one mapper for
- * creating information (POST).
- */
 @Mapper
 public interface DTOMapper {
 
@@ -35,4 +27,18 @@ public interface DTOMapper {
 	@Mapping(source = "bio", target = "bio")
 	@Mapping(source = "creationDate", target = "creationDate")
 	UserGetDTO convertEntityToUserGetDTO(User user);
+
+	@Mapping(source = "id", target = "id")
+	@Mapping(source = "barcode", target = "barcode")
+	@Mapping(source = "name", target = "name")
+	@Mapping(source = "brand", target = "brand")
+	@Mapping(source = "kcalPer100", target = "kcalPer100")
+	@Mapping(source = "packageQuantity", target = "packageQuantity")
+	@Mapping(source = "packageUnit", target = "packageUnit")
+	@Mapping(source = "kcalPerPackage", target = "kcalPerPackage")
+	@Mapping(source = "count", target = "count")
+	@Mapping(source = "createdAt", target = "createdAt")
+	@Mapping(source = "consumedAt", target = "consumedAt")
+	@Mapping(source = "lastConsumedAt", target = "lastConsumedAt")
+	PantryItemGetDTO convertEntityToPantryItemGetDTO(PantryItem pantryItem);
 }
