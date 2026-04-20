@@ -44,3 +44,9 @@ local.properties
 .xcode*
 
 /bin
+
+*.zip
+
+*.java.Zone.Identifier
+*:Zone.Identifier
+*.Zone.Identifier

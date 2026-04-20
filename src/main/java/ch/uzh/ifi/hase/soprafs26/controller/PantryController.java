@@ -6,6 +6,7 @@ import ch.uzh.ifi.hase.soprafs26.rest.dto.PantryItemGetDTO;
 import ch.uzh.ifi.hase.soprafs26.rest.dto.PantryItemPostDTO;
 import ch.uzh.ifi.hase.soprafs26.rest.dto.PantryStatsDTO;
 import ch.uzh.ifi.hase.soprafs26.rest.mapper.DTOMapper;
+import ch.uzh.ifi.hase.soprafs26.service.GuestSessionService;
 import ch.uzh.ifi.hase.soprafs26.service.PantryService;
 import ch.uzh.ifi.hase.soprafs26.service.UserService;
 import org.springframework.http.HttpStatus;
@@ -31,10 +32,12 @@ public class PantryController {
 
   private final PantryService pantryService;
   private final UserService userService;
+  private final GuestSessionService guestSessionService;
 
-  public PantryController(PantryService pantryService, UserService userService) {
+  public PantryController(PantryService pantryService, UserService userService, GuestSessionService guestSessionService) {
     this.pantryService = pantryService;
     this.userService = userService;
+    this.guestSessionService = guestSessionService;
   }
 
   @GetMapping("/pantry")
@@ -42,9 +45,11 @@ public class PantryController {
   @ResponseBody
   public List<PantryItemGetDTO> getPantry(
       @RequestHeader(value = "Authorization", required = false) String authHeader) {
-    userService.authenticate(extractToken(authHeader));
+    String token = extractToken(authHeader);
 
-    List<PantryItem> items = pantryService.getAll();
+    List<PantryItem> items = isGuestToken(token)
+        ? guestSessionService.getAll(token)
+        : getAuthenticatedPantryItems(token);
     List<PantryItemGetDTO> dtos = new ArrayList<>();
     for (PantryItem item : items) {
       dtos.add(DTOMapper.INSTANCE.convertEntityToPantryItemGetDTO(item));
@@ -58,9 +63,11 @@ public class PantryController {
   public PantryItemGetDTO addToPantry(
       @RequestBody PantryItemPostDTO pantryItemPostDTO,
       @RequestHeader(value = "Authorization", required = false) String authHeader) {
-    userService.authenticate(extractToken(authHeader));
+    String token = extractToken(authHeader);
 
-    PantryItem created = pantryService.addItem(pantryItemPostDTO);
+    PantryItem created = isGuestToken(token)
+        ? guestSessionService.addItem(token, pantryItemPostDTO)
+        : addAuthenticatedPantryItem(token, pantryItemPostDTO);
     return DTOMapper.INSTANCE.convertEntityToPantryItemGetDTO(created);
   }
 
@@ -70,9 +77,11 @@ public class PantryController {
   public PantryItemGetDTO consumeOne(
       @PathVariable("id") Long id,
       @RequestHeader(value = "Authorization", required = false) String authHeader) {
-    userService.authenticate(extractToken(authHeader));
+    String token = extractToken(authHeader);
 
-    PantryItem updatedOrDeleted = pantryService.consumeOne(id);
+    PantryItem updatedOrDeleted = isGuestToken(token)
+        ? guestSessionService.consumeOne(token, id)
+        : consumeAuthenticatedItem(token, id);
     return DTOMapper.INSTANCE.convertEntityToPantryItemGetDTO(updatedOrDeleted);
   }
 
@@ -81,7 +90,12 @@ public class PantryController {
   public void delete(
       @PathVariable("id") Long id,
       @RequestHeader(value = "Authorization", required = false) String authHeader) {
-    userService.authenticate(extractToken(authHeader));
+    String token = extractToken(authHeader);
+    if (isGuestToken(token)) {
+      guestSessionService.delete(token, id);
+      return;
+    }
+    userService.authenticate(token);
     pantryService.delete(id);
   }
 
@@ -91,10 +105,12 @@ public class PantryController {
   public PantryStatsDTO stats(
       @RequestParam("from") String from,
       @RequestHeader(value = "Authorization", required = false) String authHeader) {
-    userService.authenticate(extractToken(authHeader));
+    String token = extractToken(authHeader);
 
     LocalDate fromDate = LocalDate.parse(from);
-    PantryService.Stats stats = pantryService.computeStats(fromDate);
+    PantryService.Stats stats = isGuestToken(token)
+        ? guestSessionService.computeStats(token, fromDate)
+        : computeAuthenticatedStats(token, fromDate);
 
     PantryStatsDTO dto = new PantryStatsDTO();
     dto.setFromDate(fromDate.toString());
@@ -114,12 +130,44 @@ public class PantryController {
   public PantryBudgetPutDTO setBudget(
       @RequestBody PantryBudgetPutDTO body,
       @RequestHeader(value = "Authorization", required = false) String authHeader) {
-    userService.authenticate(extractToken(authHeader));
+    String token = extractToken(authHeader);
 
-    Double saved = pantryService.setIdealDailyKcal(body.getIdealDailyKcal());
+    Double saved = isGuestToken(token)
+        ? guestSessionService.setIdealDailyKcal(token, body.getIdealDailyKcal())
+        : setAuthenticatedBudget(token, body.getIdealDailyKcal());
     PantryBudgetPutDTO out = new PantryBudgetPutDTO();
     out.setIdealDailyKcal(saved);
     return out;
+  }
+
+
+  private boolean isGuestToken(String token) {
+    return guestSessionService.isGuestToken(token);
+  }
+
+  private List<PantryItem> getAuthenticatedPantryItems(String token) {
+    userService.authenticate(token);
+    return pantryService.getAll();
+  }
+
+  private PantryItem addAuthenticatedPantryItem(String token, PantryItemPostDTO pantryItemPostDTO) {
+    userService.authenticate(token);
+    return pantryService.addItem(pantryItemPostDTO);
+  }
+
+  private PantryItem consumeAuthenticatedItem(String token, Long id) {
+    userService.authenticate(token);
+    return pantryService.consumeOne(id);
+  }
+
+  private PantryService.Stats computeAuthenticatedStats(String token, LocalDate fromDate) {
+    userService.authenticate(token);
+    return pantryService.computeStats(fromDate);
+  }
+
+  private Double setAuthenticatedBudget(String token, Double idealDailyKcal) {
+    userService.authenticate(token);
+    return pantryService.setIdealDailyKcal(idealDailyKcal);
   }
 
   private String extractToken(String authHeader) {

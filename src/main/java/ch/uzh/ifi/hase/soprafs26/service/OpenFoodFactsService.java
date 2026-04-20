@@ -35,6 +35,7 @@ public class OpenFoodFactsService {
   // Update this string with your group/project name.
   private static final String USER_AGENT = "sopra-fs26-virtual-pantry-prototype/0.1";
 
+
   private final RestTemplate restTemplate = new RestTemplate();
   private final ObjectMapper objectMapper = new ObjectMapper();
 

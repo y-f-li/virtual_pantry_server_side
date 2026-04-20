@@ -1,6 +1,7 @@
 package ch.uzh.ifi.hase.soprafs26.controller;
 
 import ch.uzh.ifi.hase.soprafs26.rest.dto.ProductDTO;
+import ch.uzh.ifi.hase.soprafs26.service.GuestSessionService;
 import ch.uzh.ifi.hase.soprafs26.service.OpenFoodFactsService;
 import ch.uzh.ifi.hase.soprafs26.service.UserService;
 import org.springframework.http.HttpStatus;
@@ -18,10 +19,12 @@ public class ProductController {
 
   private final OpenFoodFactsService openFoodFactsService;
   private final UserService userService;
+  private final GuestSessionService guestSessionService;
 
-  public ProductController(OpenFoodFactsService openFoodFactsService, UserService userService) {
+  public ProductController(OpenFoodFactsService openFoodFactsService, UserService userService, GuestSessionService guestSessionService) {
     this.openFoodFactsService = openFoodFactsService;
     this.userService = userService;
+    this.guestSessionService = guestSessionService;
   }
 
   @GetMapping("/products/lookup")
@@ -30,7 +33,7 @@ public class ProductController {
   public ProductDTO lookupByBarcode(
       @RequestParam("barcode") String barcode,
       @RequestHeader(value = "Authorization", required = false) String authHeader) {
-    userService.authenticate(extractToken(authHeader));
+    authenticatePantryAccess(extractToken(authHeader));
     return openFoodFactsService.lookupByBarcode(barcode);
   }
 
@@ -40,8 +43,16 @@ public class ProductController {
   public List<ProductDTO> search(
       @RequestParam("q") String q,
       @RequestHeader(value = "Authorization", required = false) String authHeader) {
-    userService.authenticate(extractToken(authHeader));
+    authenticatePantryAccess(extractToken(authHeader));
     return openFoodFactsService.search(q);
+  }
+
+  private void authenticatePantryAccess(String token) {
+    if (guestSessionService.isGuestToken(token)) {
+      guestSessionService.authenticate(token);
+      return;
+    }
+    userService.authenticate(token);
   }
 
   private String extractToken(String authHeader) {
