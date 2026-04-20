@@ -47,6 +47,5 @@ local.properties
 
 *.zip
 
-*.java.Zone.Identifier
 *:Zone.Identifier
 *.Zone.Identifier

@@ -1,118 +1,374 @@
-# SoPra RESTful Service Template FS26
+# Virtual Pantry Calorie Counter
 
-## Getting started with Spring Boot
--   Documentation: https://docs.spring.io/spring-boot/docs/current/reference/html/index.html
--   Guides: http://spring.io/guides
-    -   Building a RESTful Web Service: http://spring.io/guides/gs/rest-service/
-    -   Building REST services with Spring: https://spring.io/guides/tutorials/rest/
+Check it out here: https://sopra-fs26-client-six.vercel.app/
 
-## Setup this Template with your IDE of choice
-Download your IDE of choice (e.g., [IntelliJ](https://www.jetbrains.com/idea/download/), [Visual Studio Code](https://code.visualstudio.com/), or [Eclipse](http://www.eclipse.org/downloads/)). Make sure Java 17 is installed on your system (for Windows, please make sure your `JAVA_HOME` environment variable is set to the correct version of Java).
+## Menu
+- [1. Tech Stack and Programming Skills Used](#1-tech-stack-and-programming-skills-used)
+- [2. User Guide](#2-user-guide)
+- [3. App Flow Summary](#3-app-flow-summary)
+- [4. Notes on the Current Iteration](#4-notes-on-the-current-prototype)
 
-### IntelliJ
-If you consider to use IntelliJ as your IDE of choice, you can make use of your free educational license [here](https://www.jetbrains.com/community/education/#students).
-1. File -> Open... -> SoPra server template
-2. Accept to import the project as a `gradle project`
-3. To build right click the `build.gradle` file and choose `Run Build`
+## 1. Tech Stack and Programming Skills Used
 
-### VS Code
-The following extensions can help you get started more easily:
--   `vmware.vscode-spring-boot`
--   `vscjava.vscode-spring-initializr`
--   `vscjava.vscode-spring-boot-dashboard`
--   `vscjava.vscode-java-pack`
+This project is a full-stack web application prototype for tracking pantry inventory and estimating total calorie currently in the pantry and calorie consumption over time. It combines a TypeScript front end, a Java Spring Boot back end, an in-memory database, and the Open Food Facts API.
 
-**Note:** You'll need to build the project first with Gradle, just click on the `build` command in the _Gradle Tasks_ extension. Then check the _Spring Boot Dashboard_ extension if it already shows `soprafs26` and hit the play button to start the server. If it doesn't show up, restart VS Code and check again.
+### Front End
 
-## Building with Gradle
-You can use the local Gradle Wrapper to build the application.
--   macOS: `./gradlew`
--   Linux: `./gradlew`
--   Windows: `./gradlew.bat`
+The client is built with **TypeScript**, **React**, and **Next.js**.
 
-More Information about [Gradle Wrapper](https://docs.gradle.org/current/userguide/gradle_wrapper.html) and [Gradle](https://gradle.org/docs/).
+What that means in practice:
 
-### Build
+- **TypeScript** is used to give the client code strong types for users, pantry items, product lookups, statistics, errors, and guest sessions. That makes the UI logic safer and easier to maintain.
+- **React** is used to build the app as reusable page components and state-driven interfaces.
+- **Next.js App Router** is used for page-based routing such as `/`, `/login`, `/register`, `/pantry`, `/lookup`, and `/users`.
+- **Ant Design** is used for the visual UI layer: cards, tables, forms, buttons, inputs, and layout elements.
+- A custom **API service layer** wraps `fetch()` and handles:
+  - JSON request/response handling
+  - error parsing
+  - attaching the auth token automatically
+  - support for `GET`, `POST`, `PUT`, `PATCH`, and `DELETE`
+- Client-side session logic is handled with:
+  - `localStorage` for regular registered-user login
+  - `sessionStorage` for demo mode
+- The front end also includes a **guest-session cleanup boundary**, which clears the demo pantry session when the browser tab/page session ends.
 
-```bash
-./gradlew build
-```
+Programming skills demonstrated on the client side:
 
-### Run
+- Type-safe React/Next.js application development
+- form handling and validation
+- state-driven UI updates
+- client-side session handling
+- integration with REST endpoints
+- component-based website construction
+- lightweight UX design for a product/demo workflow
 
-```bash
-./gradlew bootRun
-```
+### Back End
 
-You can verify that the server is running by visiting `localhost:8080` in your browser.
+The server is built with **Java**, **Spring Boot**, **Spring Web**, **Spring Data JPA**, and **Hibernate**.
 
-### Test
+The back end follows a classic **controller-service-repository** structure.
 
-```bash
-./gradlew test
-```
+#### Controllers
 
-### Development Mode
-You can start the backend in development mode, this will automatically trigger a new build and reload the application
-once the content of a file has been changed.
+The controllers define the REST endpoints and route incoming HTTP requests to the right service logic.
 
-Start two terminal windows and run:
+Main controllers in this app:
 
-`./gradlew build --continuous`
+- **`UserController`**
+  - user registration
+  - login/logout
+  - user profile retrieval
+  - user updates such as password changes
+- **`PantryController`**
+  - get pantry items
+  - add pantry items
+  - consume one unit of an item
+  - delete an item
+  - update the ideal calorie budget
+  - fetch pantry statistics for a chosen date range
+- **`ProductController`**
+  - barcode lookup through Open Food Facts
+- **`GuestSessionController`**
+  - create a temporary demo session
+  - clear the demo session
 
-and in the other one:
+Programming skill shown here:
 
-`./gradlew bootRun`
+- REST API design
+- HTTP method design (`GET`, `POST`, `PUT`, `PATCH`, `DELETE`)
+- authentication checks via request headers
+- endpoint separation by responsibility
 
-If you want to avoid running all tests with every change, use the following command instead:
+#### Services
 
-`./gradlew build --continuous -xtest`
+The services contain the actual application logic.
 
-## API Endpoint Testing with Postman
-We recommend using [Postman](https://www.getpostman.com) to test your API Endpoints.
+- **`UserService`** handles registration, authentication, login/logout, and user updates.
+- **`PantryService`** handles persistent pantry logic for registered users:
+  - pantry item creation
+  - consume-one logic
+  - calorie statistics calculation
+  - ideal daily calorie budget handling
+- **`GuestSessionService`** handles the demo mode:
+  - creates a temporary guest token
+  - stores pantry data in memory instead of persistent database tables
+  - keeps demo state isolated per session
+  - clears the demo pantry when the session ends or expires
+- **`OpenFoodFactsService`** is the external API integration layer:
+  - looks up products by barcode
+  - parses the returned JSON
+  - extracts product name, brand, energy, and package quantity
+  - estimates calories per package from the nutrition and quantity data
 
-## Debugging
-If something is not working and/or you don't know what is going on. We recommend using a debugger and step-through the process step-by-step.
+Programming skill shown here:
 
-To configure a debugger for SpringBoot's Tomcat servlet (i.e. the process you start with `./gradlew bootRun` command), do the following:
+- business-logic design
+- external API integration
+- defensive parsing of real-world JSON data
+- calorie estimation logic from mixed nutrition/package fields
+- temporary in-memory demo session design
 
-1. Open Tab: **Run**/Edit Configurations
-2. Add a new Remote Configuration and name it properly
-3. Start the Server in Debug mode: `./gradlew bootRun --debug-jvm`
-4. Press `Shift + F9` or the use **Run**/Debug "Name of your task"
-5. Set breakpoints in the application where you need it
-6. Step through the process one step at a time
+#### Repositories
 
-## Testing
-Have a look here: https://www.baeldung.com/spring-boot-testing
+The repositories are the persistence layer and are used by Spring Data JPA to read and write data.
 
-<br>
-<br>
-<br>
+Main repositories:
 
-## Docker
+- **`UserRepository`**
+- **`PantryItemRepository`**
+- **`PantryConsumptionEventRepository`**
+- **`PantrySettingsRepository`**
 
-### Introduction
-This year Docker will be used to ease the process of deployment.\
-Docker is a tool that uses containers as isolated environments, ensuring that the application runs consistently and uniformly across different devices.\
-Everything in this repository is already set up to minimize your effort for deployment.\
-All changes to the main branch will automatically be pushed to dockerhub and optimized for production.
+These repositories support the persistent part of the application for registered users.
 
-### Setup
-1. **One** member of the team should create an account on [dockerhub](https://hub.docker.com/), _incorporating the group number into the account name_, for example, `SoPra_group_XX`.\
-2. This account then creates a repository on dockerhub with the _same name as the group's Github repository name_.\
-3. Finally, the person's account details need to be added as [secrets](https://docs.github.com/en/actions/security-guides/using-secrets-in-github-actions#creating-secrets-for-a-repository) to the group's repository:
-    - dockerhub_username (the username of the dockerhub account from step 1, for example, `SoPra_group_XX`)
-    - dockerhub_password (a generated PAT([personal access token](https://docs.docker.com/docker-hub/access-tokens/)) of the account with read and write access)
-    - dockerhub_repo_name (the name of the dockerhub repository from step 2)
+Programming skill shown here:
 
-### Pull and run
-Once the image is created and has been successfully pushed to dockerhub, the image can be run on any machine.\
-Ensure that [Docker](https://www.docker.com/) is installed on the machine you wish to run the container.\
-First, pull (download) the image with the following command, replacing your username and repository name accordingly.
+- ORM-based persistence with JPA/Hibernate
+- database-backed CRUD operations
+- separation of persistence from business logic
 
-```docker pull <dockerhub_username>/<dockerhub_repo_name>```
+### Data Model
 
-Then, run the image in a container with the following command, again replacing _<dockerhub_username>_ and _<dockerhub_repo_name>_ accordingly.
+The server defines several entities that reflect the pantry domain.
 
-```docker run -p 3000:3000 <dockerhub_username>/<dockerhub_repo_name>```
+- **`User`**: account identity and authentication-related data
+- **`PantryItem`**: what is currently owned in the pantry
+- **`PantryConsumptionEvent`**: each `Consume 1` action is logged as its own event so calorie consumption statistics remain reliable
+- **`PantrySettings`**: stores the ideal daily calorie budget
+
+A useful design choice here is that **consumption is logged separately from pantry stock**. That means the app can both:
+
+- show how many calories are still in the pantry now
+- compute how many calories have been consumed over time
+
+### Database and Persistence
+
+The current server configuration uses **H2 in-memory database**.
+
+That means:
+
+- registered-user pantry data persists while the server is running
+- the database is lightweight and easy to use for prototyping
+- if the server restarts, the in-memory database resets
+
+### Open Food Facts API Wiring
+
+The app integrates the **Open Food Facts** public product database.
+
+In the current prototype, the product lookup flow works like this:
+
+1. The client sends a barcode to the server.
+2. The server calls the Open Food Facts product endpoint.
+3. The response JSON is parsed.
+4. The app extracts:
+   - barcode
+   - product name
+   - brand
+   - calories per 100g or 100ml
+   - package quantity/unit
+5. The server estimates **calories per package**.
+6. That enriched product information is returned to the client.
+7. The client can then add that item into the pantry with a chosen quantity.
+
+The front end also fetches a product image directly from Open Food Facts for the lookup result card when an image is available.
+
+Programming skills demonstrated by this integration:
+
+- working with third-party HTTP APIs
+- JSON parsing and field extraction
+- error handling around upstream failures
+- transforming external data into app-specific DTOs
+
+### Demo Mode Architecture
+
+For easy testing of the features in this app, a **guest demo mode** is implemented.
+
+Instead of forcing a new user to register immediately, the app lets them enter a disposable pantry session.
+
+How it works:
+
+- pressing **Guest** creates a guest session token on the server
+- that token is stored in `sessionStorage`, not `localStorage`
+- the guest pantry is stored in temporary server-side memory
+- when the browser session ends, the client asks the server to clear that guest session
+- the next guest starts with a fresh demo pantry
+
+This is useful because the pantry flow can be demonstrated without creating an account first.
+
+---
+
+## 2. User Guide
+
+### Start at the Landing Page
+
+When you open the app, the landing page gives you two paths:
+
+- **Guest** for a disposable demo session
+- **Login / Register** for a persistent account flow
+
+### Option A: Use the Demo Mode
+
+Click **Guest** if you want to try the pantry without creating an account.
+
+What happens:
+
+- a demo session is created
+- you are sent into the pantry page
+- the demo pantry starts empty
+- the pantry resets when the browser session ends
+
+This is the easiest way to test the prototype quickly.
+
+### Option B: Register or Log In
+
+If you want the non-demo flow:
+
+1. Click **Register** and create an account with username and password.
+2. After registration, you are taken into the pantry.
+3. Later you can use **Login** to return to that account.
+
+The login page also includes **Continue in demo mode**, so if someone refreshes while experimenting and ends up on `/login`, they can go straight back into the demo flow.
+
+### Use the Pantry Page
+
+The pantry page is the main dashboard of the app.
+
+What you can see there:
+
+- **Estimated calories in your pantry now**
+- **Average consumed per day**
+- **Ideal calorie budget per day**
+
+You also see a guidance callout that tells the user to:
+
+- **Add items** to see the pantry calories change
+- **Consume 1** to see the average calorie consumption change
+
+#### Set the calorie tracking range
+
+The pantry statistics include a date selector.
+
+By default, the app starts counting from the **beginning of the current calendar week**. That gives the user a quick weekly view of calorie consumption.
+
+If you change the date, the app recalculates the average calories consumed per day starting from that new date.
+
+#### Set an ideal daily calorie budget
+
+The pantry page also lets you enter an **Ideal kcal/day** value.
+
+After saving it, the app compares the current average daily consumed calories against that ideal budget and shows the difference.
+
+### Add Items to the Pantry
+
+On the pantry page, click **Add items**.
+
+That takes you to the product lookup page.
+
+### Use the Product Lookup Page
+
+The lookup page is a barcode-based product search flow powered by Open Food Facts.
+
+What to do:
+
+1. Enter a barcode into the barcode field.
+2. Click **Lookup**.
+3. Review the returned product card.
+4. Choose how many units to add.
+5. Click **Add to pantry**.
+
+The lookup result card can show:
+
+- product name
+- brand
+- barcode
+- estimated calories per package
+- product image if available from Open Food Facts
+
+#### Demo-friendly barcode examples
+
+If you are in demo mode, the lookup page shows example barcodes directly under the search bar. Those examples can be clicked to auto-fill the barcode and run the lookup.
+
+Current demo examples:
+
+- `5000168198514` — Sablés chocolat – McVitie's
+- `7613404535318` — Lait UHT
+- `7613404249895` — Vollkorn Complet Integrale
+
+This makes the demo easier because a new user may not have a real product barcode ready.
+
+### Back in the Pantry: Consume Items
+
+Once items have been added to the pantry, they appear in the pantry table.
+
+Each pantry row includes actions such as:
+
+- **Consume 1**
+- **Remove**
+
+#### What `Consume 1` does
+
+When you click **Consume 1**:
+
+- the pantry item count goes down by one
+- one consumption event is logged
+- the average calories consumed per day can increase accordingly
+- if the last unit is consumed, the item is no longer shown as active pantry stock
+
+This means the app tracks both:
+
+- what calories are still owned in the pantry
+- what calories have already been consumed
+
+### Users Directory
+
+The `/users` area is only for **registered accounts**.
+
+Guest demo mode does not include the users directory.
+
+Registered users can:
+
+- view the user list
+- open a selected profile
+- inspect profile details
+- change their own password from their own profile page
+
+### Exit the Demo
+
+If you are in demo mode, the pantry and lookup pages include an **Exit demo** action.
+
+That lets you leave the temporary session and go back to the regular flow.
+
+---
+
+## 3. App Flow Summary
+
+### Demo flow
+
+1. Open landing page
+2. Click **Guest**
+3. Enter a fresh temporary pantry
+4. Use barcode lookup
+5. Add items to pantry
+6. Use **Consume 1** to log consumption
+7. Session clears when the browser session ends
+
+### Registered user flow
+
+1. Open landing page
+2. Register or log in
+3. Enter pantry
+4. Add items through barcode lookup
+5. Track pantry calories and consumed calories
+6. Set an ideal calorie budget
+7. Browse user profiles if needed
+
+---
+
+## 4. Notes on the Current Prototype
+
+- The current product flow is **barcode-first**.
+- The current persistence layer is **H2 in-memory**, which is not yet a production database. It keeps the data in RAM, not in a permanent production database like PostgreSQL or MySQL, which means the data stored disappears when the app stops of restars. 
+- Guest demo mode is intentionally temporary and isolated.
+- Product calorie estimation depends on the quality of the nutrition and quantity information returned by Open Food Facts.
+- This is a prototype designed to showcase the pantry flow clearly: lookup, add, track owned calories, consume, and analyze average daily consumption.
+- This is built on top of a class project - software engineering lab individual project
