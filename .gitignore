@@ -47,5 +47,8 @@ local.properties
 
 *.zip
 
+# Windows / WSL downloaded-file metadata
 *:Zone.Identifier
 *.Zone.Identifier
+*Zone.Identifier
+*#Uf03aZone.Identifier
