@@ -39,15 +39,15 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Deploy to App Engine
         id: deploy
         uses: google-github-actions/deploy-appengine@v0.2.0
         with:
           deliverables: app.yaml
-          version: v1
+          version: v-${{ github.run_number }}-${{ github.run_attempt }}
           credentials: ${{ secrets.GCP_SERVICE_CREDENTIALS }}
 
-      - name: Test
-        run: curl "${{ steps.deploy.outputs.url }}"
+      - name: Test deployed URL
+        run: curl --fail "${{ steps.deploy.outputs.url }}"

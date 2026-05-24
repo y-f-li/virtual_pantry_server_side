@@ -52,23 +52,17 @@ public class UserController {
   @ResponseStatus(HttpStatus.CREATED)
   @ResponseBody
   public UserGetDTO createUser(@RequestBody UserPostDTO userPostDTO) {
-    // INTENTIONAL ROLLBACK TEST PATCH:
-    // This endpoint normally registers a new user. For the rollback smoke test,
-    // it delegates to login instead so the deployed version is visibly different.
-    User loggedInUser = userService.login(userPostDTO.getUsername(), userPostDTO.getPassword());
-    return DTOMapper.INSTANCE.convertEntityToUserGetDTO(loggedInUser);
+    User userInput = DTOMapper.INSTANCE.convertUserPostDTOtoEntity(userPostDTO);
+    User createdUser = userService.createUser(userInput);
+    return DTOMapper.INSTANCE.convertEntityToUserGetDTO(createdUser);
   }
 
   @PostMapping("/login")
   @ResponseStatus(HttpStatus.OK)
   @ResponseBody
   public UserGetDTO login(@RequestBody UserPostDTO userPostDTO) {
-    // INTENTIONAL ROLLBACK TEST PATCH:
-    // This endpoint normally logs in an existing user. For the rollback smoke test,
-    // it delegates to registration instead so login/register behavior is swapped.
-    User userInput = DTOMapper.INSTANCE.convertUserPostDTOtoEntity(userPostDTO);
-    User createdUser = userService.createUser(userInput);
-    return DTOMapper.INSTANCE.convertEntityToUserGetDTO(createdUser);
+    User loggedInUser = userService.login(userPostDTO.getUsername(), userPostDTO.getPassword());
+    return DTOMapper.INSTANCE.convertEntityToUserGetDTO(loggedInUser);
   }
 
   @PostMapping("/logout")
