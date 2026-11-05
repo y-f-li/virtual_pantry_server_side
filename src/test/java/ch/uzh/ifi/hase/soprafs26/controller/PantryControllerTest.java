@@ -34,7 +34,8 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletRequest;
 import jakarta.servlet.ServletResponse;
 import jakarta.servlet.http.HttpServletRequest;
-
+import ch.uzh.ifi.hase.soprafs26.service.ConsumeWithAIService;
+import org.junit.jupiter.api.Disabled;
 
 @WebMvcTest(PantryController.class)
 @Import(GlobalExceptionAdvice.class)
@@ -51,6 +52,9 @@ class PantryControllerTest {
 
         @MockitoBean
         private AuthFilter authFilter;
+
+        @MockitoBean
+        private ConsumeWithAIService consumeWithAIService;
 
         @BeforeEach
         void setUp() throws Exception {
@@ -345,6 +349,7 @@ class PantryControllerTest {
                 .andExpect(jsonPath("$.message").value("Quantity must be greater than zero."));
         }
 
+        @Disabled("Legacy meal-image endpoint is no longer implemented")
         @Test
         void estimateMealPortion_success_returnsOk() throws Exception {
                 PortionEstimateResponseDTO response = new PortionEstimateResponseDTO();
@@ -364,6 +369,7 @@ class PantryControllerTest {
                         .andExpect(jsonPath("$.suggestedMaxAmount").value(200.0));
         }
 
+        @Disabled("Legacy meal recognition endpoint is no longer implemented")
         @Test
         void recognizeMealFood_success_returnsOk() throws Exception {
                 MealFoodRecognitionResponseDTO response = new MealFoodRecognitionResponseDTO();

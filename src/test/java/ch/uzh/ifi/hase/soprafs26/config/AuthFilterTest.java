@@ -1,5 +1,6 @@
 package ch.uzh.ifi.hase.soprafs26.config;
 
+import static org.mockito.BDDMockito.given;
 import ch.uzh.ifi.hase.soprafs26.entity.User;
 import ch.uzh.ifi.hase.soprafs26.repository.UserRepository;
 import jakarta.servlet.FilterChain;
@@ -8,14 +9,37 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
+import java.time.Instant;
+
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
+
+
 class AuthFilterTest {
+
+
+    private MockHttpServletRequest request;
+    private MockHttpServletResponse response;
+    
+
+    private static final String TEST_TOKEN = "test-token";
+
+    @BeforeEach
+    void setUp() {
+        userRepository = mock(UserRepository.class);
+        authFilter = new AuthFilter(userRepository);
+
+        request = new MockHttpServletRequest("GET", "/users/me");
+        request.addHeader("Authorization", TEST_TOKEN);
+
+        response = new MockHttpServletResponse();
+        filterChain = mock(FilterChain.class);
+    }
 
     @Mock
     private UserRepository userRepository;
@@ -24,12 +48,6 @@ class AuthFilterTest {
     private FilterChain filterChain;
 
     private AuthFilter authFilter;
-
-    @BeforeEach
-    void setup() {
-        MockitoAnnotations.openMocks(this);
-        authFilter = new AuthFilter(userRepository);
-    }
 
     @Test
     void validTokenWithWhitespace_trimsAndAuthenticates() throws Exception {
@@ -131,4 +149,47 @@ class AuthFilterTest {
         MockHttpServletRequest request = new MockHttpServletRequest("GET", "/households");
         assertFalse(authFilter.shouldNotFilter(request));
     }
+
+    @Test
+    void guestUserWithExpiredToken_returns401()throws Exception {
+        
+        User guestUser = new User();
+        guestUser.setGuest(true);
+        guestUser.setGuestExpiresAt(Instant.now().minusSeconds(3600)); // Set expiration in the past
+        guestUser.setId(1L);
+
+        given(userRepository.findByToken(TEST_TOKEN)).willReturn(guestUser);
+
+        authFilter.doFilter(request, response, filterChain);
+
+        assertEquals(HttpServletResponse.SC_UNAUTHORIZED, response.getStatus());
+        verify(filterChain, never())
+                .doFilter(
+                    any(HttpServletRequest.class), 
+                    any(HttpServletResponse.class)
+                );
+        assertNull(request.getAttribute("authenticatedUserId"));            
+    }
+
+    @Test
+    void guestUserWithValidToken_returns200()throws Exception {
+        
+        User guestUser = new User();
+        guestUser.setGuest(true);
+        guestUser.setGuestExpiresAt(Instant.now().plusSeconds(3600)); // Set expiration in the future
+        guestUser.setId(1L);
+        given(userRepository.findByToken(TEST_TOKEN)).willReturn(guestUser);
+
+        authFilter.doFilter(request, response, filterChain);
+
+        assertEquals(HttpServletResponse.SC_OK, response.getStatus());
+        verify(filterChain, times(1))
+                .doFilter(
+                    any(HttpServletRequest.class), 
+                    any(HttpServletResponse.class)
+                );
+        assertEquals(request.getAttribute("authenticatedUserId"), guestUser.getId());
+    }
+
+
 }

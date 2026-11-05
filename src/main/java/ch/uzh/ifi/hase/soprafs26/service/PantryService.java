@@ -686,6 +686,14 @@ public class PantryService {
 
         BigDecimal inventoryAmountToSubtract = resolveInventoryAmountToSubtract(
                 pantryItem, consumedUnit, BigDecimal.valueOf(consumeAmount));
+
+        if (inventoryAmountToSubtract == null
+                || inventoryAmountToSubtract.signum() <= 0) {
+            throw new IllegalArgumentException(
+                "Cannot convert the consumed unit to this item's inventory unit."
+            );
+        }
+                
         if (inventoryAmountToSubtract != null
                 && inventoryAmountToSubtract.doubleValue() > safeAmount(pantryItem.getAmount())) {
             throw new IllegalArgumentException("Consumed quantity exceeds available quantity.");

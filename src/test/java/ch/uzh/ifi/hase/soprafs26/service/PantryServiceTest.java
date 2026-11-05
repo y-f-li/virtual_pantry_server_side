@@ -1973,4 +1973,48 @@ class PantryServiceTest {
 
         assertNull(result.getKcalPerServing());
     }
+
+
+    @Test
+    void consumeItem_rejectsUnconvertibleUnit_withoutWrites() {
+        Household household = new Household();
+        household.setId(1L);
+
+        PantryItem item = new PantryItem();
+        item.setId(10L);
+        item.setHouseholdId(1L);
+        item.setAmount(1.0);
+        item.setAmountUnit("package");
+        // No package-weight metadata: grams cannot be converted.
+
+        when(mockHouseholdRepo.findById(1L))
+            .thenReturn(Optional.of(household));
+
+        when(mockHouseholdMemberRepo.existsById(
+            any(HouseholdMemberId.class)
+        )).thenReturn(true);
+
+        when(mockPantryRepo.findByIdAndHouseholdId(10L, 1L))
+            .thenReturn(Optional.of(item));
+
+        IllegalArgumentException error = assertThrows(
+            IllegalArgumentException.class,
+            () -> pantryService.consumeItem(
+                1L, 10L, 150.0, "g", null, false, 99L, null
+            )
+        );
+
+        assertEquals(
+            "Cannot convert the consumed unit to this item's inventory unit.",
+            error.getMessage()
+        );
+
+        verify(mockConsumptionRepo, never())
+            .save(any(ConsumptionLog.class));
+        verify(mockPantryRepo, never())
+            .save(any(PantryItem.class));
+        verify(mockPantryRepo, never())
+            .delete(any(PantryItem.class));
+    }
+
 }

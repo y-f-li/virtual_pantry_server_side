@@ -6,6 +6,13 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.mockito.ArgumentCaptor;
+import static org.mockito.Mockito.verify;
+import java.time.Duration;
+
+import java.beans.Transient;
+import java.time.Instant;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
@@ -24,6 +31,9 @@ class UserServiceTest {
 
 	@Mock
 	private UserRepository userRepository;
+
+	@Mock
+	private HouseholdService householdService;
 
 	@InjectMocks
 	private UserService userService;
@@ -167,4 +177,54 @@ class UserServiceTest {
 		assertEquals(HttpStatus.BAD_REQUEST, exception.getStatusCode());
 		assertEquals("Token must not be empty.", exception.getReason());
 	}
+
+	@Test
+	void createGuestUser_createsValidGuest() throws Exception {
+
+		User createdUser = userService.createGuestUser();
+
+		ArgumentCaptor<User> guestCaptor =
+			ArgumentCaptor.forClass(User.class);
+
+		verify(userRepository).save(guestCaptor.capture());
+
+		User savedGuest = guestCaptor.getValue();
+
+		assertNotNull(savedGuest.getPassword());
+		assertNotNull(savedGuest.getUsername());
+		assertNotNull(savedGuest.getName());
+		assertTrue(savedGuest.isGuest());
+		assertEquals(savedGuest.getStatus(), UserStatus.ONLINE);
+		assertNotNull(savedGuest.getToken()); 
+		assertNotNull(savedGuest.getCreatedAt());
+		assertEquals(
+			3600,
+			Duration.between(
+				savedGuest.getCreatedAt(),
+				savedGuest.getGuestExpiresAt()
+			).toSeconds()
+		);
+	
+	}
+
+	@Test
+	void createGuestUser_createsPantryForCorrectOwner() {
+		// Arrange: simulate the database assigning a user ID
+		Mockito.when(userRepository.save(Mockito.any(User.class)))
+			.thenAnswer(invocation -> {
+				User savedUser = invocation.getArgument(0);
+				savedUser.setId(42L);
+				return savedUser;
+			});
+
+		// Act
+		User guest = userService.createGuestUser();
+
+		// Assert
+		assertEquals(Long.valueOf(42L), guest.getId());
+
+		verify(householdService)
+			.createHousehold("My Pantry", 42L);
+	}	
+
 }

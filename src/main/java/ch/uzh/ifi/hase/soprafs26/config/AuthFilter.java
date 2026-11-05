@@ -1,6 +1,7 @@
 package ch.uzh.ifi.hase.soprafs26.config;
 
 import java.io.IOException;
+import java.time.Instant;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
@@ -29,7 +30,9 @@ public class AuthFilter extends OncePerRequestFilter {
         return "OPTIONS".equalsIgnoreCase(method)
                 || path.startsWith("/ws")
                 || path.equals("/users/register")
-                || path.equals("/users/login");
+                || path.equals("/users/login")
+                || path.equals("/users/demo")
+                || path.equals("/");
     }
 
     @Override
@@ -48,6 +51,18 @@ public class AuthFilter extends OncePerRequestFilter {
         if (user == null) {
             response.sendError(HttpStatus.UNAUTHORIZED.value(), "Invalid or expired token.");
             return;
+        }
+
+        if (user.isGuest()) {
+            Instant expiresAt = user.getGuestExpiresAt();
+
+            if (expiresAt == null || !Instant.now().isBefore(expiresAt)) {
+                response.sendError(
+                    HttpStatus.UNAUTHORIZED.value(),
+                    "Demo session expired."
+                );
+                return;
+            }
         }
 
         request.setAttribute("authenticatedUserId", user.getId());

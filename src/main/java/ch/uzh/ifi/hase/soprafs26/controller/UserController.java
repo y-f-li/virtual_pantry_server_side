@@ -79,6 +79,13 @@ public class UserController {
 		return toAuthDTO(createdUser);
 	}
 
+	@PostMapping("/users/demo")
+	@ResponseStatus(HttpStatus.CREATED)
+	public UserAuthDTO guestRegister() {
+		User createdUser = userService.createGuestUser();
+		return toAuthDTO(createdUser);
+	}
+
 	@PostMapping("/users/login")
 	@ResponseStatus(HttpStatus.OK)
 	public UserAuthDTO login(@RequestBody UserLoginDTO userLoginDTO) {

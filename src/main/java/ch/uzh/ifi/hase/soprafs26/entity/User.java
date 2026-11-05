@@ -45,6 +45,12 @@ public class User implements Serializable {
 	@Column(nullable = false, updatable = false)
 	private Instant createdAt;
 
+	@Column(nullable = false)
+	private boolean guest = false;
+
+	@Column
+	private Instant guestExpiresAt;
+
 	public Long getId() {
 		return id;
 	}
@@ -99,5 +105,21 @@ public class User implements Serializable {
 
 	public void setCreatedAt(Instant createdAt) {
 		this.createdAt = createdAt;
+	}
+
+	public boolean isGuest() {
+		return guest;
+	}
+
+	public void setGuest(boolean guest) {
+		this.guest = guest;
+	}
+
+	public Instant getGuestExpiresAt() {
+		return guestExpiresAt;
+	}
+
+	public void setGuestExpiresAt(Instant guestExpiresAt) {
+		this.guestExpiresAt = guestExpiresAt;
 	}
 }

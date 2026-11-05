@@ -21,6 +21,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import org.springframework.web.server.ResponseStatusException;
+import static org.mockito.Mockito.verify;
 
 import ch.uzh.ifi.hase.soprafs26.constant.UserStatus;
 import ch.uzh.ifi.hase.soprafs26.entity.User;
@@ -83,7 +84,6 @@ class UserControllerTest {
 
 		// when
 		MockHttpServletRequestBuilder getRequest = get("/users")
-				.contentType(MediaType.APPLICATION_JSON)
 				.header("Authorization", TEST_TOKEN);
 
 		// then
@@ -317,4 +317,26 @@ class UserControllerTest {
 					String.format("The request body could not be created.%s", e.toString()));
 		}
 	}
+
+
+	@Test
+	void guestRegister_withoutLogin_returns201() throws Exception {
+		// Arrange
+		User guest = new User();
+		guest.setId(123L);
+		guest.setUsername("demo_test");
+		guest.setName("Guest User");
+		guest.setGuest(true);
+		guest.setToken("guest-token");
+		guest.setStatus(UserStatus.ONLINE);
+
+		given(userService.createGuestUser()).willReturn(guest);
+
+		// Act + Assert
+		mockMvc.perform(post("/users/demo"))
+				.andExpect(status().isCreated())
+				.andExpect(jsonPath("$.token", is("guest-token")));
+		verify(userService, Mockito.times(1)).createGuestUser();
+	}
+  
 }

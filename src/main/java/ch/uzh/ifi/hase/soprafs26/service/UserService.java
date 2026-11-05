@@ -33,9 +33,14 @@ public class UserService {
 	private final PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
 	private final UserRepository userRepository;
+	private final HouseholdService householdService;
 
-	public UserService(@Qualifier("userRepository") UserRepository userRepository) {
+	public UserService(
+			@Qualifier("userRepository") UserRepository userRepository, 
+			HouseholdService householdService
+		) {
 		this.userRepository = userRepository;
+		this.householdService = householdService;
 	}
 
 	public List<User> getUsers() {
@@ -55,6 +60,7 @@ public class UserService {
 	}
 
 	public User registerUser(User newUser) {
+
 		validateCredentials(newUser.getUsername(), newUser.getPassword());
 		checkIfUsernameExists(newUser.getUsername());
 
@@ -68,8 +74,30 @@ public class UserService {
 		newUser.setCreatedAt(Instant.now());
 		newUser = userRepository.save(newUser);
 		userRepository.flush();
+		createDefaultPantry(newUser);
 
 		log.debug("Registered user: {}", newUser.getUsername());
+
+		return newUser;
+	}
+
+	public User createGuestUser() {
+		Instant now = Instant.now();
+		User newUser = new User();
+		newUser.setPassword(passwordEncoder.encode(UUID.randomUUID().toString()));
+		newUser.setUsername("Guest_" + UUID.randomUUID().toString());
+		newUser.setName("Guest User");
+		newUser.setGuest(true);
+		newUser.setToken(UUID.randomUUID().toString());
+		newUser.setStatus(UserStatus.ONLINE);
+		newUser.setCreatedAt(now);
+		newUser.setGuestExpiresAt(now.plusSeconds(3600)); // Set expiration to 1 hour from now
+		newUser = userRepository.save(newUser);
+		userRepository.flush();
+		createDefaultPantry(newUser);
+		
+		log.debug("Created guest user: {}", newUser.getUsername());
+
 		return newUser;
 	}
 
@@ -131,4 +159,8 @@ public class UserService {
 			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Password must not be empty.");
 		}
 	}
+
+	private void createDefaultPantry(User user) {
+		householdService.createHousehold("My Pantry", user.getId());
+	}	
 }
