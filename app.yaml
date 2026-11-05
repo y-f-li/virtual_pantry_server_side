@@ -7,9 +7,10 @@ instance_class: F2
 automatic_scaling:
   max_instances: 1
 
+service_account: service-account-created-feb-17@sopra-fs26-li-yifu-server.iam.gserviceaccount.com
 
 env_variables:
-  OPENAI_API_KEY: ""
+  OPENAI_SECRET_VERSION: "projects/sopra-fs26-li-yifu-server/secrets/pantry-openai-api-key/versions/latest"
   AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT: ""
   AZURE_DOCUMENT_INTELLIGENCE_API_KEY: ""
   AZURE_DOCUMENT_INTELLIGENCE_API_VERSION: "2024-11-30"
