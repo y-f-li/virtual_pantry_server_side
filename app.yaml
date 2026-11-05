@@ -10,6 +10,7 @@ automatic_scaling:
 service_account: service-account-created-feb-17@sopra-fs26-li-yifu-server.iam.gserviceaccount.com
 
 env_variables:
+  CORS_ALLOWED_ORIGINS: "https://virtualpantryclientside.vercel.app"
   OPENAI_SECRET_VERSION: "projects/sopra-fs26-li-yifu-server/secrets/pantry-openai-api-key/versions/latest"
   AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT: ""
   AZURE_DOCUMENT_INTELLIGENCE_API_KEY: ""
